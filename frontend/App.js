@@ -12,24 +12,24 @@ const API_URL = 'http://192.168.254.3:8000/api/todos/';
 
 const QUOTES = [
   {
-    text: 'The best way to predict the future is to create it.',
-    author: 'Peter Drucker',
+    text: "The best way to predict the future is to create it.",
+    author: "Peter Drucker",
   },
   {
-    text: 'Success is not the key to happiness. Happiness is the key to success.',
-    author: 'Albert Schweitzer',
+    text: "Success is not the key to happiness. Happiness is the key to success.",
+    author: "Albert Schweitzer",
   },
   {
-    text: 'Don’t watch the clock; do what it does. Keep going.',
-    author: 'Sam Levenson',
+    text: "Don't watch the clock; do what it does. Keep going.",
+    author: "Sam Levenson",
   },
   {
-    text: 'The secret of getting ahead is getting started.',
-    author: 'Mark Twain',
+    text: "The secret of getting ahead is getting started.",
+    author: "Mark Twain",
   },
   {
-    text: 'Believe you can and you’re halfway there.',
-    author: 'Theodore Roosevelt',
+    text: "Believe you can and you're halfway there.",
+    author: "Theodore Roosevelt",
   },
 ];
 
@@ -244,12 +244,21 @@ export default function App() {
     const filtered = todos.filter(todo => todo.completed === filterCompleted);
     return (
       <View style={{ flex: 1 }}>
-        <TouchableOpacity style={{ marginTop: 20, marginBottom: 10 }} onPress={() => setPage('main')}>
-          <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>{'< Back to Main'}</Text>
-        </TouchableOpacity>
-        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 10, alignSelf: 'center' }}>
-          {filterCompleted ? 'Completed Tasks' : 'Pending Tasks'}
-        </Text>
+        <View style={styles.headerRow}> 
+          <TouchableOpacity
+            style={styles.backArrowOnly}
+            onPress={() => setPage('main')}
+            activeOpacity={0.7}
+            accessibilityLabel="Back to Main"
+          >
+            <Text style={styles.backArrowIcon}>←</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginRight: 40 }}>
+            <Text style={styles.headerTitle}>
+              {filterCompleted ? 'Completed Tasks' : 'Pending Tasks'}
+            </Text>
+          </View>
+        </View>
         {filtered.length === 0 ? (
           <Text style={styles.emptyText}>
             {filterCompleted ? 'No completed tasks.' : 'No pending tasks.'}
@@ -520,11 +529,29 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  backArrowOnly: {
+    marginTop: 0,
+    marginBottom: 0,
+    alignSelf: 'flex-start',
+    padding: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'transparent',
+    elevation: 0,
+  },
+  backArrowIcon: {
+    color: '#007AFF',
+    fontSize: 36,
+    fontWeight: '600',
+    lineHeight: 40,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f7f8fa',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     fontSize: 32,
@@ -532,6 +559,7 @@ const styles = StyleSheet.create({
     color: '#222',
     marginBottom: 20,
     alignSelf: 'center',
+    marginTop: 32,
   },
   inputContainer: {
     backgroundColor: '#fff',
@@ -688,5 +716,17 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 16,
     marginTop: 40,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#222',
   },
 });
