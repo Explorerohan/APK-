@@ -123,7 +123,7 @@ export default function App() {
         time: editTime,
         priority: editPriority,
       });
-      setTodos(todos.map(todo => todo.id === editTodo.id ? response.data : todo));
+      await fetchTodos();
       setEditModalVisible(false);
       setEditTodo(null);
     } catch (error) {
@@ -147,7 +147,14 @@ export default function App() {
         <Text style={{ color: '#555', fontSize: 13, marginBottom: 2 }}>Date: {item.date} | Time: {item.time}</Text>
         <Text style={{ color: '#555', fontSize: 13, marginBottom: 8 }}>Priority: {item.priority}</Text>
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => {
+              // Debug log to ensure this is called
+              console.log('Edit pressed for', item);
+              openEditModal(item);
+            }}
+          >
             <Text style={styles.actionText}>✏️ Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteTodo(item.id)}>
@@ -267,28 +274,18 @@ export default function App() {
               <Text style={styles.addButtonText}>Pending Tasks</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.listContainer}>
-            {loading ? (
-              <ActivityIndicator size="large" color="#007AFF" />
-            ) : (
-              <FlatList
-                data={todos}
-                keyExtractor={item => item.id?.toString() || Math.random().toString()}
-                renderItem={renderItem}
-                contentContainerStyle={{ paddingBottom: 40 }}
-                // No empty message on main page
-              />
-            )}
-          </View>
+          {/* No tasks are shown on the main page. Pending and completed tasks are shown only in their dedicated sections. */}
         </>}
-        <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 10 }}>
-          <Text style={{ fontSize: 40, marginBottom: 8 }}>💡</Text>
-          <Text style={{ fontStyle: 'italic', color: '#007AFF', fontSize: 17, textAlign: 'center', marginHorizontal: 10 }}>
-            "{quote.text}"
-          </Text>
-          <Text style={{ color: '#888', fontSize: 15, marginTop: 4, textAlign: 'center', marginBottom: 6 }}>- {quote.author}</Text>
-          {/* No button to change quote, quote is fixed per app load */}
-        </View>
+        {page === 'main' && (
+          <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 10 }}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>💡</Text>
+            <Text style={{ fontStyle: 'italic', color: '#007AFF', fontSize: 17, textAlign: 'center', marginHorizontal: 10 }}>
+              "{quote.text}"
+            </Text>
+            <Text style={{ color: '#888', fontSize: 15, marginTop: 4, textAlign: 'center', marginBottom: 6 }}>- {quote.author}</Text>
+            {/* No button to change quote, quote is fixed per app load */}
+          </View>
+        )}
         {page === 'completed' && renderFilteredList(true)}
         {page === 'pending' && renderFilteredList(false)}
         <Modal
