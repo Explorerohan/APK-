@@ -1,3 +1,17 @@
+// Helper to calculate time left until due date/time
+function getTimeLeft(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return '';
+  const due = new Date(`${dateStr}T${timeStr}`);
+  const now = new Date();
+  const diff = due - now;
+  if (isNaN(due.getTime()) || diff <= 0) return 'Overdue';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ${hours % 24}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+}
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Switch, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Pressable } from 'react-native';
@@ -132,33 +146,53 @@ export default function App() {
     setEditSubmitting(false);
   };
 
+  // For dynamic due time updates
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000); // update every minute
+    return () => clearInterval(interval);
+  }, []);
+
   const renderItem = ({ item }) => (
-    <View style={styles.todoItem}>
-      <View style={styles.todoContent}>
-        <View style={styles.todoHeader}>
-          <Text style={styles.todoTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={[styles.statusBadge, item.completed ? styles.completedBadge : styles.pendingBadge]}>
-            <Text style={styles.statusText}>
-              {item.completed ? 'Completed' : 'Pending'}
-            </Text>
+    <View style={{
+      backgroundColor: '#fff',
+      borderRadius: 18,
+      padding: 20,
+      marginBottom: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+      borderLeftWidth: 5,
+      borderLeftColor:
+        item.priority === 'High' ? '#FF3B30' :
+        item.priority === 'Medium' ? '#007AFF' :
+        '#34C759',
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, marginRight: 10 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#222', marginBottom: 10, letterSpacing: 0.2 }} numberOfLines={1}>{item.title}</Text>
+          <Text style={{ fontSize: 15, color: '#666', marginBottom: 10, lineHeight: 20 }}>{item.description}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={{ color: '#007AFF', fontSize: 13, marginRight: 16 }}>📅 {item.date}</Text>
+            <Text style={{ color: '#007AFF', fontSize: 13 }}>⏰ {item.time}</Text>
           </View>
+          <Text style={{ color: '#FF3B30', fontSize: 13, fontWeight: 'bold', marginBottom: 10 }}>Due: {getTimeLeft(item.date, item.time)}</Text>
+          <View style={{ height: 8 }} />
         </View>
-        <Text style={styles.todoDescription} numberOfLines={2}>{item.description}</Text>
-        <Text style={{ color: '#555', fontSize: 13, marginBottom: 2 }}>Date: {item.date} | Time: {item.time}</Text>
-        <Text style={{ color: '#555', fontSize: 13, marginBottom: 8 }}>Priority: {item.priority}</Text>
-        <View style={styles.actionRow}>
+        <View style={{ flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: 8 }}>
           <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => {
-              // Debug log to ensure this is called
-              console.log('Edit pressed for', item);
-              openEditModal(item);
-            }}
+            style={{ backgroundColor: '#F4F6FB', borderRadius: 8, padding: 8, marginBottom: 6, borderWidth: 1, borderColor: '#E3E6EA', width: 38, alignItems: 'center' }}
+            onPress={() => openEditModal(item)}
           >
-            <Text style={styles.actionText}>✏️ Edit</Text>
+            <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 17 }}>✏️</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteTodo(item.id)}>
-            <Text style={styles.actionText}>🗑️ Delete</Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#FFF0F0', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#FFD1D1', width: 38, alignItems: 'center' }}
+            onPress={() => handleDeleteTodo(item.id)}
+          >
+            <Text style={{ color: '#FF3B30', fontWeight: 'bold', fontSize: 17 }}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
