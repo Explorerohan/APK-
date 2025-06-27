@@ -389,16 +389,16 @@ export default function App() {
                 })}
                 </View>
               </View>
-              <View style={styles.modalActions}>
+              <View style={[styles.modalActions, { paddingRight: 10 }]}> 
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={[styles.addButton, { minWidth: 90 }]}
                   onPress={handleEditTodo}
                   disabled={editSubmitting}
                 >
-                  <Text style={styles.addButtonText}>{editSubmitting ? 'Saving...' : 'Save'}</Text>
+                  <Text style={styles.addButtonText}>{editSubmitting ? 'Updating...' : 'Update'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.addButton, { backgroundColor: '#aaa', marginLeft: 10 }]}
+                  style={[styles.addButton, { backgroundColor: '#aaa', marginLeft: 12, minWidth: 90 }]}
                   onPress={() => setEditModalVisible(false)}
                   disabled={editSubmitting}
                 >
