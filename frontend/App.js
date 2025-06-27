@@ -1,18 +1,9 @@
-// Helper to calculate time left until due date/time
-function getTimeLeft(dateStr, timeStr) {
-  if (!dateStr || !timeStr) return '';
-  const due = new Date(`${dateStr}T${timeStr}`);
-  const now = new Date();
-  const diff = due - now;
-  if (isNaN(due.getTime()) || diff <= 0) return 'Overdue';
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const days = Math.floor(hours / 24);
-  if (days > 0) return `${days}d ${hours % 24}h left`;
-  if (hours > 0) return `${hours}h ${minutes}m left`;
-  return `${minutes}m left`;
-}
+import { registerTranslation, en } from 'react-native-paper-dates';
+// Register English locale for react-native-paper-dates
+registerTranslation('en', en);
 import React, { useState, useEffect } from 'react';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Switch, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Pressable } from 'react-native';
 import axios from 'axios';
@@ -42,12 +33,29 @@ const QUOTES = [
   },
 ];
 
+// Helper to calculate time left until due date/time
+function getTimeLeft(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return '';
+  const due = new Date(`${dateStr}T${timeStr}`);
+  const now = new Date();
+  const diff = due - now;
+  if (isNaN(due.getTime()) || diff <= 0) return 'Overdue';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ${hours % 24}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+}
+
 export default function App() {
   const [todos, setTodos] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [priority, setPriority] = useState('Medium');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -55,12 +63,18 @@ export default function App() {
   const [editTodo, setEditTodo] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editDate, setEditDate] = useState('');
-  const [editTime, setEditTime] = useState('');
+  const [editDate, setEditDate] = useState(new Date());
+  const [editTime, setEditTime] = useState(new Date());
+  const [editDatePickerVisible, setEditDatePickerVisible] = useState(false);
+  const [editTimePickerVisible, setEditTimePickerVisible] = useState(false);
   const [editPriority, setEditPriority] = useState('Medium');
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [page, setPage] = useState('main'); // 'main', 'completed', 'pending'
   const [quote, setQuote] = useState(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+
+// ...existing code...
+
+  // ...existing code...
 
   const fetchTodos = async () => {
     setLoading(true);
@@ -78,25 +92,28 @@ export default function App() {
   }, []);
 
   const handleAddTodo = async () => {
-    if (!title.trim() || !description.trim() || !date.trim() || !time.trim() || !priority.trim()) {
+    if (!title.trim() || !description.trim() || !date || !time || !priority.trim()) {
       Alert.alert('Validation', 'All fields are required.');
       return;
     }
     setSubmitting(true);
     try {
+      // Format date and time as strings
+      const dateStr = date instanceof Date ? date.toISOString().slice(0, 10) : '';
+      const timeStr = time instanceof Date ? time.toTimeString().slice(0, 8) : '';
       const response = await axios.post(API_URL, {
         title,
         description,
-        date,
-        time,
+        date: dateStr,
+        time: timeStr,
         priority,
         // completed is not sent, defaults to false in backend
       });
       setTodos([response.data, ...todos]);
       setTitle('');
       setDescription('');
-      setDate('');
-      setTime('');
+      setDate(new Date());
+      setTime(new Date());
       setPriority('Medium');
     } catch (error) {
       Alert.alert('Error', 'Failed to add todo');
@@ -117,24 +134,26 @@ export default function App() {
     setEditTodo(todo);
     setEditTitle(todo.title);
     setEditDescription(todo.description);
-    setEditDate(todo.date);
-    setEditTime(todo.time);
+    setEditDate(todo.date ? new Date(todo.date + 'T00:00:00') : null);
+    setEditTime(todo.time ? new Date('1970-01-01T' + todo.time) : null);
     setEditPriority(todo.priority);
     setEditModalVisible(true);
   };
 
   const handleEditTodo = async () => {
-    if (!editTitle.trim() || !editDescription.trim() || !editDate.trim() || !editTime.trim() || !editPriority.trim()) {
+    if (!editTitle.trim() || !editDescription.trim() || !editDate || !editTime || !editPriority.trim()) {
       Alert.alert('Validation', 'All fields are required.');
       return;
     }
     setEditSubmitting(true);
     try {
+      const dateStr = editDate instanceof Date ? editDate.toISOString().slice(0, 10) : '';
+      const timeStr = editTime instanceof Date ? editTime.toTimeString().slice(0, 8) : '';
       const response = await axios.put(`${API_URL}${editTodo.id}/`, {
         title: editTitle,
         description: editDescription,
-        date: editDate,
-        time: editTime,
+        date: dateStr,
+        time: timeStr,
         priority: editPriority,
       });
       await fetchTodos();
@@ -248,43 +267,75 @@ export default function App() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.container}>
-        {page === 'main' && <>
-          <Text style={styles.header}>TODO List</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Title"
-              value={title}
-              onChangeText={setTitle}
-              editable={!submitting}
-            />
-            <TextInput
-              style={[styles.input, { height: 60 }]}
-              placeholder="Description"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              editable={!submitting}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Date (YYYY-MM-DD)"
-              value={date}
-              onChangeText={setDate}
-              editable={!submitting}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Time (HH:MM:SS)"
-              value={time}
-              onChangeText={setTime}
-              editable={!submitting}
-            />
+    <PaperProvider>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.container}>
+          {page === 'main' && <>
+            <Text style={styles.header}>TODO List</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Title"
+                value={title}
+                onChangeText={setTitle}
+                editable={!submitting}
+              />
+              <TextInput
+                style={[styles.input, { height: 60 }]}
+                placeholder="Description"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                editable={!submitting}
+              />
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setDatePickerVisible(true)}
+                disabled={submitting}
+              >
+                <Text style={{ color: date ? '#222' : '#aaa' }}>
+                  {date ? date.toLocaleDateString() : 'Select Date'}
+                </Text>
+              </TouchableOpacity>
+              <DatePickerModal
+                locale="en"
+                mode="single"
+                visible={datePickerVisible}
+                date={date}
+                onConfirm={({ date: d }) => {
+                  setDatePickerVisible(false);
+                  if (d) setDate(d);
+                }}
+                onDismiss={() => setDatePickerVisible(false)}
+              />
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setTimePickerVisible(true)}
+                disabled={submitting}
+              >
+                <Text style={{ color: time ? '#222' : '#aaa' }}>
+                  {time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                </Text>
+              </TouchableOpacity>
+              <TimePickerModal
+                visible={timePickerVisible}
+                onConfirm={({ hours, minutes }) => {
+                  setTimePickerVisible(false);
+                  if (typeof hours === 'number' && typeof minutes === 'number') {
+                    const newTime = new Date(date);
+                    newTime.setHours(hours);
+                    newTime.setMinutes(minutes);
+                    newTime.setSeconds(0);
+                    setTime(newTime);
+                  }
+                }}
+                onDismiss={() => setTimePickerVisible(false)}
+                hours={time.getHours()}
+                minutes={time.getMinutes()}
+              />
             <View style={styles.input}>
               <Text style={{ marginBottom: 4 }}>Priority:</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -368,19 +419,50 @@ export default function App() {
                 multiline
                 editable={!editSubmitting}
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Date (YYYY-MM-DD)"
-                value={editDate}
-                onChangeText={setEditDate}
-                editable={!editSubmitting}
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setEditDatePickerVisible(true)}
+                disabled={editSubmitting}
+              >
+                <Text style={{ color: editDate ? '#222' : '#aaa' }}>
+                  {editDate ? editDate.toLocaleDateString() : 'Select Date'}
+                </Text>
+              </TouchableOpacity>
+              <DatePickerModal
+                locale="en"
+                mode="single"
+                visible={editDatePickerVisible}
+                date={editDate}
+                onConfirm={({ date: d }) => {
+                  setEditDatePickerVisible(false);
+                  if (d) setEditDate(d);
+                }}
+                onDismiss={() => setEditDatePickerVisible(false)}
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Time (HH:MM:SS)"
-                value={editTime}
-                onChangeText={setEditTime}
-                editable={!editSubmitting}
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setEditTimePickerVisible(true)}
+                disabled={editSubmitting}
+              >
+                <Text style={{ color: editTime ? '#222' : '#aaa' }}>
+                  {editTime ? editTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                </Text>
+              </TouchableOpacity>
+              <TimePickerModal
+                visible={editTimePickerVisible}
+                onConfirm={({ hours, minutes }) => {
+                  setEditTimePickerVisible(false);
+                  if (typeof hours === 'number' && typeof minutes === 'number') {
+                    const newTime = new Date(editDate);
+                    newTime.setHours(hours);
+                    newTime.setMinutes(minutes);
+                    newTime.setSeconds(0);
+                    setEditTime(newTime);
+                  }
+                }}
+                onDismiss={() => setEditTimePickerVisible(false)}
+                hours={editTime.getHours()}
+                minutes={editTime.getMinutes()}
               />
               <View style={styles.input}>
                 <Text style={{ marginBottom: 4 }}>Priority:</Text>
@@ -433,6 +515,7 @@ export default function App() {
         <StatusBar style="dark" />
       </View>
     </KeyboardAvoidingView>
+  </PaperProvider>
   );
 }
 
