@@ -153,51 +153,73 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={{
-      backgroundColor: '#fff',
-      borderRadius: 18,
-      padding: 20,
-      marginBottom: 18,
-      shadowColor: '#000',
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
-      borderLeftWidth: 5,
-      borderLeftColor:
-        item.priority === 'High' ? '#FF3B30' :
-        item.priority === 'Medium' ? '#007AFF' :
-        '#34C759',
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, marginRight: 10 }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#222', marginBottom: 10, letterSpacing: 0.2 }} numberOfLines={1}>{item.title}</Text>
-          <Text style={{ fontSize: 15, color: '#666', marginBottom: 10, lineHeight: 20 }}>{item.description}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={{ color: '#007AFF', fontSize: 13, marginRight: 16 }}>📅 {item.date}</Text>
-            <Text style={{ color: '#007AFF', fontSize: 13 }}>⏰ {item.time}</Text>
+  const handleCompleteTodo = async (id) => {
+    try {
+      await axios.patch(`${API_URL}${id}/`, { completed: true });
+      await fetchTodos();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to mark as completed');
+    }
+  };
+
+  const renderItem = ({ item }) => {
+    const isCompleted = item.completed;
+    return (
+      <View style={{
+        backgroundColor: '#fff',
+        borderRadius: 18,
+        padding: 20,
+        marginBottom: 18,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+        borderLeftWidth: 5,
+        borderLeftColor:
+          item.priority === 'High' ? '#FF3B30' :
+          item.priority === 'Medium' ? '#007AFF' :
+          '#34C759',
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, marginRight: 10 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#222', marginBottom: 10, letterSpacing: 0.2 }} numberOfLines={1}>{item.title}</Text>
+            <Text style={{ fontSize: 15, color: '#666', marginBottom: 10, lineHeight: 20 }}>{item.description}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ color: '#007AFF', fontSize: 13, marginRight: 16 }}>📅 {item.date}</Text>
+              <Text style={{ color: '#007AFF', fontSize: 13 }}>⏰ {item.time}</Text>
+            </View>
+            <Text style={{ color: '#FF3B30', fontSize: 13, fontWeight: 'bold', marginBottom: 10 }}>Due: {getTimeLeft(item.date, item.time)}</Text>
+            <View style={{ height: 8 }} />
           </View>
-          <Text style={{ color: '#FF3B30', fontSize: 13, fontWeight: 'bold', marginBottom: 10 }}>Due: {getTimeLeft(item.date, item.time)}</Text>
-          <View style={{ height: 8 }} />
-        </View>
-        <View style={{ flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: 8 }}>
-          <TouchableOpacity
-            style={{ backgroundColor: '#F4F6FB', borderRadius: 8, padding: 8, marginBottom: 6, borderWidth: 1, borderColor: '#E3E6EA', width: 38, alignItems: 'center' }}
-            onPress={() => openEditModal(item)}
-          >
-            <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 17 }}>✏️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ backgroundColor: '#FFF0F0', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#FFD1D1', width: 38, alignItems: 'center' }}
-            onPress={() => handleDeleteTodo(item.id)}
-          >
-            <Text style={{ color: '#FF3B30', fontWeight: 'bold', fontSize: 17 }}>🗑️</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: 8 }}>
+            {!isCompleted && (
+              <TouchableOpacity
+                style={{ backgroundColor: '#F4F6FB', borderRadius: 8, padding: 8, marginBottom: 6, borderWidth: 1, borderColor: '#E3E6EA', width: 38, alignItems: 'center' }}
+                onPress={() => openEditModal(item)}
+              >
+                <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 17 }}>✏️</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={{ backgroundColor: '#FFF0F0', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#FFD1D1', width: 38, alignItems: 'center' }}
+              onPress={() => handleDeleteTodo(item.id)}
+            >
+              <Text style={{ color: '#FF3B30', fontWeight: 'bold', fontSize: 17 }}>🗑️</Text>
+            </TouchableOpacity>
+            {!isCompleted && (
+              <TouchableOpacity
+                style={{ backgroundColor: '#E6F9ED', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#B7F0C0', width: 38, alignItems: 'center', marginTop: 6 }}
+                onPress={() => handleCompleteTodo(item.id)}
+              >
+                <Text style={{ color: '#34C759', fontWeight: 'bold', fontSize: 17 }}>✔️</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderFilteredList = (filterCompleted) => {
     const filtered = todos.filter(todo => todo.completed === filterCompleted);
