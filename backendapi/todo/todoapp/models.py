@@ -12,4 +12,3 @@ class Todo(models.Model):
         ('Low', 'Low')
     ])
     completed = models.BooleanField(default=False)
-    
