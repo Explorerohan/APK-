@@ -3,21 +3,50 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Switch, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Pressable } from 'react-native';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.254.3:8000/api/todoinfo/'; 
+const API_URL = 'http://192.168.254.3:8000/api/todos/'; 
+
+const QUOTES = [
+  {
+    text: 'The best way to predict the future is to create it.',
+    author: 'Peter Drucker',
+  },
+  {
+    text: 'Success is not the key to happiness. Happiness is the key to success.',
+    author: 'Albert Schweitzer',
+  },
+  {
+    text: 'Don’t watch the clock; do what it does. Keep going.',
+    author: 'Sam Levenson',
+  },
+  {
+    text: 'The secret of getting ahead is getting started.',
+    author: 'Mark Twain',
+  },
+  {
+    text: 'Believe you can and you’re halfway there.',
+    author: 'Theodore Roosevelt',
+  },
+];
 
 export default function App() {
   const [todos, setTodos] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [completed, setCompleted] = useState(false);
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [priority, setPriority] = useState('Medium');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editTodo, setEditTodo] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editCompleted, setEditCompleted] = useState(false);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editPriority, setEditPriority] = useState('Medium');
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [page, setPage] = useState('main'); // 'main', 'completed', 'pending'
+  const [quote, setQuote] = useState(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
 
   const fetchTodos = async () => {
     setLoading(true);
@@ -35,8 +64,8 @@ export default function App() {
   }, []);
 
   const handleAddTodo = async () => {
-    if (!title.trim() || !description.trim()) {
-      Alert.alert('Validation', 'Title and Description are required.');
+    if (!title.trim() || !description.trim() || !date.trim() || !time.trim() || !priority.trim()) {
+      Alert.alert('Validation', 'All fields are required.');
       return;
     }
     setSubmitting(true);
@@ -44,12 +73,17 @@ export default function App() {
       const response = await axios.post(API_URL, {
         title,
         description,
-        completed,
+        date,
+        time,
+        priority,
+        // completed is not sent, defaults to false in backend
       });
       setTodos([response.data, ...todos]);
       setTitle('');
       setDescription('');
-      setCompleted(false);
+      setDate('');
+      setTime('');
+      setPriority('Medium');
     } catch (error) {
       Alert.alert('Error', 'Failed to add todo');
     }
@@ -69,13 +103,15 @@ export default function App() {
     setEditTodo(todo);
     setEditTitle(todo.title);
     setEditDescription(todo.description);
-    setEditCompleted(todo.completed);
+    setEditDate(todo.date);
+    setEditTime(todo.time);
+    setEditPriority(todo.priority);
     setEditModalVisible(true);
   };
 
   const handleEditTodo = async () => {
-    if (!editTitle.trim() || !editDescription.trim()) {
-      Alert.alert('Validation', 'Title and Description are required.');
+    if (!editTitle.trim() || !editDescription.trim() || !editDate.trim() || !editTime.trim() || !editPriority.trim()) {
+      Alert.alert('Validation', 'All fields are required.');
       return;
     }
     setEditSubmitting(true);
@@ -83,7 +119,9 @@ export default function App() {
       const response = await axios.put(`${API_URL}${editTodo.id}/`, {
         title: editTitle,
         description: editDescription,
-        completed: editCompleted,
+        date: editDate,
+        time: editTime,
+        priority: editPriority,
       });
       setTodos(todos.map(todo => todo.id === editTodo.id ? response.data : todo));
       setEditModalVisible(false);
@@ -105,9 +143,9 @@ export default function App() {
             </Text>
           </View>
         </View>
-        <Text style={styles.todoDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
+        <Text style={styles.todoDescription} numberOfLines={2}>{item.description}</Text>
+        <Text style={{ color: '#555', fontSize: 13, marginBottom: 2 }}>Date: {item.date} | Time: {item.time}</Text>
+        <Text style={{ color: '#555', fontSize: 13, marginBottom: 8 }}>Priority: {item.priority}</Text>
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
             <Text style={styles.actionText}>✏️ Edit</Text>
@@ -120,58 +158,139 @@ export default function App() {
     </View>
   );
 
+  const renderFilteredList = (filterCompleted) => {
+    const filtered = todos.filter(todo => todo.completed === filterCompleted);
+    return (
+      <View style={{ flex: 1 }}>
+        <TouchableOpacity style={{ marginTop: 20, marginBottom: 10 }} onPress={() => setPage('main')}>
+          <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>{'< Back to Main'}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 10, alignSelf: 'center' }}>
+          {filterCompleted ? 'Completed Tasks' : 'Pending Tasks'}
+        </Text>
+        {filtered.length === 0 ? (
+          <Text style={styles.emptyText}>
+            {filterCompleted ? 'No completed tasks.' : 'No pending tasks.'}
+          </Text>
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={item => item.id?.toString() || Math.random().toString()}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          />
+        )}
+      </View>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.container}>
-        <Text style={styles.header}>TODO List</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Title"
-            value={title}
-            onChangeText={setTitle}
-            editable={!submitting}
-          />
-          <TextInput
-            style={[styles.input, { height: 60 }]}
-            placeholder="Description"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            editable={!submitting}
-          />
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Completed:</Text>
-            <Switch
-              value={completed}
-              onValueChange={setCompleted}
+        {page === 'main' && <>
+          <Text style={styles.header}>TODO List</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Title"
+              value={title}
+              onChangeText={setTitle}
+              editable={!submitting}
+            />
+            <TextInput
+              style={[styles.input, { height: 60 }]}
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              editable={!submitting}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              editable={!submitting}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Time (HH:MM:SS)"
+              value={time}
+              onChangeText={setTime}
+              editable={!submitting}
+            />
+            <View style={styles.input}>
+              <Text style={{ marginBottom: 4 }}>Priority:</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {['High', 'Medium', 'Low'].map(opt => {
+                  let bgColor = '#f1f3f6';
+                  if (priority === opt) {
+                    if (opt === 'High') bgColor = '#FF3B30';
+                    else if (opt === 'Medium') bgColor = '#007AFF';
+                    else if (opt === 'Low') bgColor = '#34C759';
+                  }
+                  let textColor = priority === opt ? '#fff' : '#222';
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      style={{
+                        backgroundColor: bgColor,
+                        borderRadius: 8,
+                        paddingVertical: 8,
+                        paddingHorizontal: 16,
+                      }}
+                      onPress={() => setPriority(opt)}
+                      disabled={submitting}
+                    >
+                      <Text style={{ color: textColor, fontWeight: 'bold' }}>{opt}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddTodo}
               disabled={submitting}
-            />
+            >
+              <Text style={styles.addButtonText}>{submitting ? 'Adding...' : 'Add Todo'}</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddTodo}
-            disabled={submitting}
-          >
-            <Text style={styles.addButtonText}>{submitting ? 'Adding...' : 'Add Todo'}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            <TouchableOpacity style={[styles.addButton, { flex: 1, marginRight: 8, backgroundColor: '#34C759' }]} onPress={() => setPage('completed')}>
+              <Text style={styles.addButtonText}>Completed Tasks</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.addButton, { flex: 1, marginLeft: 8, backgroundColor: '#FF9500' }]} onPress={() => setPage('pending')}>
+              <Text style={styles.addButtonText}>Pending Tasks</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.listContainer}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#007AFF" />
+            ) : (
+              <FlatList
+                data={todos}
+                keyExtractor={item => item.id?.toString() || Math.random().toString()}
+                renderItem={renderItem}
+                contentContainerStyle={{ paddingBottom: 40 }}
+                // No empty message on main page
+              />
+            )}
+          </View>
+        </>}
+        <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 10 }}>
+          <Text style={{ fontSize: 40, marginBottom: 8 }}>💡</Text>
+          <Text style={{ fontStyle: 'italic', color: '#007AFF', fontSize: 17, textAlign: 'center', marginHorizontal: 10 }}>
+            "{quote.text}"
+          </Text>
+          <Text style={{ color: '#888', fontSize: 15, marginTop: 4, textAlign: 'center', marginBottom: 6 }}>- {quote.author}</Text>
+          {/* No button to change quote, quote is fixed per app load */}
         </View>
-        <View style={styles.listContainer}>
-          {loading ? (
-            <ActivityIndicator size="large" color="#007AFF" />
-          ) : (
-            <FlatList
-              data={todos}
-              keyExtractor={item => item.id?.toString() || Math.random().toString()}
-              renderItem={renderItem}
-              contentContainerStyle={{ paddingBottom: 40 }}
-              ListEmptyComponent={<Text style={styles.emptyText}>No todos yet.</Text>}
-            />
-          )}
-        </View>
+        {page === 'completed' && renderFilteredList(true)}
+        {page === 'pending' && renderFilteredList(false)}
         <Modal
           visible={editModalVisible}
           animationType="slide"
@@ -196,13 +315,48 @@ export default function App() {
                 multiline
                 editable={!editSubmitting}
               />
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Completed:</Text>
-                <Switch
-                  value={editCompleted}
-                  onValueChange={setEditCompleted}
-                  disabled={editSubmitting}
-                />
+              <TextInput
+                style={styles.input}
+                placeholder="Date (YYYY-MM-DD)"
+                value={editDate}
+                onChangeText={setEditDate}
+                editable={!editSubmitting}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Time (HH:MM:SS)"
+                value={editTime}
+                onChangeText={setEditTime}
+                editable={!editSubmitting}
+              />
+              <View style={styles.input}>
+                <Text style={{ marginBottom: 4 }}>Priority:</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {['High', 'Medium', 'Low'].map(opt => {
+                  let bgColor = '#f1f3f6';
+                  if (editPriority === opt) {
+                    if (opt === 'High') bgColor = '#FF3B30';
+                    else if (opt === 'Medium') bgColor = '#007AFF';
+                    else if (opt === 'Low') bgColor = '#34C759';
+                  }
+                  let textColor = editPriority === opt ? '#fff' : '#222';
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      style={{
+                        backgroundColor: bgColor,
+                        borderRadius: 8,
+                        paddingVertical: 8,
+                        paddingHorizontal: 16,
+                      }}
+                      onPress={() => setEditPriority(opt)}
+                      disabled={editSubmitting}
+                    >
+                      <Text style={{ color: textColor, fontWeight: 'bold' }}>{opt}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                </View>
               </View>
               <View style={styles.modalActions}>
                 <TouchableOpacity
